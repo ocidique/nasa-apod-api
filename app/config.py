@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     use_mock: bool = False  # Use mock data instead of NASA API (for testing)
+    max_cached_list_size: int = 50  # Maximum number of APODs to return in list endpoint
     
     class Config:
         env_file = ".env"
