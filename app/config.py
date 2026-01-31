@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     redis_db: int = 0
     api_host: str = "0.0.0.0"
     api_port: int = 8000
+    use_mock: bool = False  # Use mock data instead of NASA API (for testing)
     
     class Config:
         env_file = ".env"

@@ -141,6 +141,12 @@ Environment variables (`.env` file):
 | `REDIS_DB` | Redis database number | `0` |
 | `API_HOST` | API server host | `0.0.0.0` |
 | `API_PORT` | API server port | `8000` |
+| `USE_MOCK` | Use mock data for testing | `false` |
+
+**Note**: When `USE_MOCK=true`, the API uses mock data instead of calling NASA's API. This is useful for:
+- Testing in environments without internet access
+- Development and testing without API rate limits
+- Demonstrating the API functionality
 
 ## Architecture
 
