@@ -110,8 +110,18 @@ class NASAAPODService:
             return []
         
         try:
-            keys = await self.redis_client.keys("apod:*")
-            dates = [key.split(":")[1] for key in keys]
+            # Use SCAN instead of KEYS for non-blocking iteration
+            dates = []
+            cursor = 0
+            while True:
+                cursor, keys = await self.redis_client.scan(
+                    cursor, 
+                    match="apod:*",
+                    count=100
+                )
+                dates.extend([key.split(":")[1] for key in keys])
+                if cursor == 0:
+                    break
             return sorted(dates, reverse=True)
         except Exception:
             return []

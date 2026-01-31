@@ -2,9 +2,24 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse
 from datetime import datetime, date as date_type
 from typing import Optional
+from contextlib import asynccontextmanager
 from app.models import APODResponse, APODListResponse
 from app.service import nasa_service
 from app.config import settings
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifespan events"""
+    # Startup
+    await nasa_service.initialize()
+    # Preload recent APODs in background
+    await nasa_service.preload_recent_apods(days=7)
+    
+    yield
+    
+    # Shutdown
+    await nasa_service.close()
 
 
 app = FastAPI(
@@ -12,22 +27,9 @@ app = FastAPI(
     description="A RESTful API for browsing NASA's Astronomy Picture of the Day",
     version="1.0.0",
     docs_url="/",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize services on startup"""
-    await nasa_service.initialize()
-    # Preload recent APODs in background
-    await nasa_service.preload_recent_apods(days=7)
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup on shutdown"""
-    await nasa_service.close()
 
 
 @app.get("/health", tags=["Health"])
@@ -126,7 +128,7 @@ async def list_cached_apods():
         dates = await nasa_service.get_available_dates()
         
         results = []
-        for date_str in dates[:50]:  # Limit to 50 most recent
+        for date_str in dates[:settings.max_cached_list_size]:
             try:
                 target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
                 apod_data = await nasa_service.fetch_apod(target_date)
