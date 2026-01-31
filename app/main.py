@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse
-from datetime import datetime, date
+from datetime import datetime, date as date_type
 from typing import Optional
 from app.models import APODResponse, APODListResponse
 from app.service import nasa_service
@@ -37,26 +37,26 @@ async def health_check():
 
 
 @app.get("/api/apod", response_model=APODResponse, tags=["APOD"])
-async def get_apod(date_param: Optional[str] = None):
+async def get_apod(date: Optional[str] = None):
     """
     Get Astronomy Picture of the Day
     
-    - **date_param**: Optional date in YYYY-MM-DD format. Defaults to today.
+    - **date**: Optional date in YYYY-MM-DD format. Defaults to today.
     
     Returns the APOD for the specified date with navigation links to next/prev.
     """
     try:
         # Parse date if provided
-        if date_param:
+        if date:
             try:
-                target_date = datetime.strptime(date_param, "%Y-%m-%d").date()
+                target_date = datetime.strptime(date, "%Y-%m-%d").date()
             except ValueError:
                 raise HTTPException(
                     status_code=400,
                     detail="Invalid date format. Use YYYY-MM-DD"
                 )
         else:
-            target_date = date.today()
+            target_date = date_type.today()
         
         # Validate date range
         if target_date < nasa_service.APOD_START_DATE:
@@ -65,7 +65,7 @@ async def get_apod(date_param: Optional[str] = None):
                 detail=f"Date must be on or after {nasa_service.APOD_START_DATE.isoformat()}"
             )
         
-        if target_date > date.today():
+        if target_date > date_type.today():
             raise HTTPException(
                 status_code=400,
                 detail="Cannot request future dates"
@@ -99,7 +99,7 @@ async def get_today_apod():
     
     This is a convenience endpoint that always returns today's APOD.
     """
-    return await get_apod(date_param=None)
+    return await get_apod(date=None)
 
 
 @app.get("/api/apod/{date_str}", response_model=APODResponse, tags=["APOD"])
@@ -111,7 +111,7 @@ async def get_apod_by_date(date_str: str):
     
     RESTful endpoint for accessing APOD by date as a path parameter.
     """
-    return await get_apod(date_param=date_str)
+    return await get_apod(date=date_str)
 
 
 @app.get("/api/apod/list/cached", response_model=APODListResponse, tags=["APOD"])

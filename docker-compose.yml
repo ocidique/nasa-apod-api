@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   redis:
     image: redis:7-alpine
@@ -26,6 +24,7 @@ services:
       - REDIS_DB=0
       - API_HOST=0.0.0.0
       - API_PORT=8000
+      - USE_MOCK=${USE_MOCK:-false}
     depends_on:
       redis:
         condition: service_healthy

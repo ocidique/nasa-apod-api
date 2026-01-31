@@ -4,6 +4,7 @@ import json
 from datetime import datetime, date, timedelta
 from typing import Optional, Dict, Any
 from app.config import settings
+from app.mock_data import MOCK_APOD_DATA
 
 
 class NASAAPODService:
@@ -40,15 +41,30 @@ class NASAAPODService:
         if cached_data:
             return cached_data
         
-        # Fetch from NASA API
-        async with httpx.AsyncClient() as client:
-            params = {
-                "api_key": settings.nasa_api_key,
-                "date": date_str
-            }
-            response = await client.get(self.NASA_APOD_URL, params=params)
-            response.raise_for_status()
-            data = response.json()
+        # Use mock data if configured
+        if settings.use_mock:
+            if date_str in MOCK_APOD_DATA:
+                data = MOCK_APOD_DATA[date_str]
+            else:
+                # Generate a generic mock for any date
+                data = {
+                    "date": date_str,
+                    "title": f"Mock APOD for {date_str}",
+                    "explanation": "This is mock data used for testing when NASA API is unavailable.",
+                    "url": f"https://apod.nasa.gov/apod/image/mock_{date_str}.jpg",
+                    "media_type": "image",
+                    "hdurl": f"https://apod.nasa.gov/apod/image/mock_{date_str}_hd.jpg"
+                }
+        else:
+            # Fetch from NASA API
+            async with httpx.AsyncClient() as client:
+                params = {
+                    "api_key": settings.nasa_api_key,
+                    "date": date_str
+                }
+                response = await client.get(self.NASA_APOD_URL, params=params)
+                response.raise_for_status()
+                data = response.json()
         
         # Store in cache
         await self._store_in_cache(date_str, data)
