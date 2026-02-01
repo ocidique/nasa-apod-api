@@ -142,11 +142,16 @@ Environment variables (`.env` file):
 | `API_HOST` | API server host | `0.0.0.0` |
 | `API_PORT` | API server port | `8000` |
 | `USE_MOCK` | Use mock data for testing | `false` |
+| `CACHE_TTL_RECENT` | Cache TTL for recent APODs in days (0=indefinite) | `0` |
+| `CACHE_TTL_HISTORICAL` | Cache TTL for historical APODs in days | `365` |
+| `CACHE_RECENT_DAYS_THRESHOLD` | Days to consider an APOD "recent" | `7` |
 
 **Note**: When `USE_MOCK=true`, the API uses mock data instead of calling NASA's API. This is useful for:
 - Testing in environments without internet access
 - Development and testing without API rate limits
 - Demonstrating the API functionality
+
+**Cache Configuration**: The cache TTL settings allow you to tune the caching strategy. Since APOD data is immutable JSON (~1-2KB each), aggressive caching is recommended for better performance when browsing historical dates.
 
 ## Architecture
 
@@ -158,10 +163,28 @@ Environment variables (`.env` file):
 
 ## Caching Strategy
 
-- Recent APODs (last 30 days): Cached indefinitely
-- Older APODs: Cached for 7 days
+The API implements an intelligent caching strategy optimized for NASA APOD data:
+
+**Why aggressive caching works:**
+- APODs are **historical and immutable** - once published, they never change
+- Data is **lightweight JSON** (~1-2KB per entry), not large image files
+- Users often **browse historical dates** going back years
+
+**Cache Duration:**
+- **Recent APODs** (last 7 days): Cached **indefinitely** (no expiration)
+  - Allows for occasional corrections or updates
+  - Configurable via `CACHE_TTL_RECENT` (0 = indefinite)
+- **Historical APODs** (older than 7 days): Cached for **1 year**
+  - These are immutable and safe to cache long-term
+  - Configurable via `CACHE_TTL_HISTORICAL` (default: 365 days)
+  
+**Additional Features:**
 - Current day APOD: Auto-refreshed on startup
 - Background preloading: Configurable via `/api/apod/preload` endpoint
+- Configurable threshold: Adjust what's considered "recent" via `CACHE_RECENT_DAYS_THRESHOLD`
+
+**Memory Efficiency:**
+Even caching all ~11,000 historical APODs would only use ~11-22MB of Redis memory, making long-term caching practical and cost-effective.
 
 ## Development
 

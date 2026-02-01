@@ -86,21 +86,40 @@ class NASAAPODService:
         return None
     
     async def _store_in_cache(self, date_str: str, data: Dict[str, Any]):
-        """Store APOD in Redis cache"""
+        """Store APOD in Redis cache with intelligent TTL strategy
+        
+        Since APOD data is historical and immutable (only JSON, no large files),
+        we can cache it for extended periods:
+        - Recent APODs (last week): Cache indefinitely (may have corrections)
+        - Historical APODs (older): Cache for 1 year
+        """
         if not self.redis_client:
             return
         
         try:
-            # Store with 7 day expiration for old dates, no expiration for recent
             target_date = datetime.fromisoformat(date_str).date()
-            if target_date < date.today() - timedelta(days=30):
+            days_ago = (date.today() - target_date).days
+            
+            # Determine cache TTL based on age
+            if days_ago <= settings.cache_recent_days_threshold:
+                # Recent APODs: cache indefinitely (no expiration)
+                # These might occasionally get corrections/updates
+                if settings.cache_ttl_recent == 0:
+                    await self.redis_client.set(f"apod:{date_str}", json.dumps(data))
+                else:
+                    await self.redis_client.setex(
+                        f"apod:{date_str}",
+                        timedelta(days=settings.cache_ttl_recent),
+                        json.dumps(data)
+                    )
+            else:
+                # Historical APODs: cache for long period (default 1 year)
+                # These are immutable and only consume minimal space (JSON only)
                 await self.redis_client.setex(
                     f"apod:{date_str}",
-                    timedelta(days=7),
+                    timedelta(days=settings.cache_ttl_historical),
                     json.dumps(data)
                 )
-            else:
-                await self.redis_client.set(f"apod:{date_str}", json.dumps(data))
         except Exception:
             pass
     
