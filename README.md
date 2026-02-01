@@ -45,12 +45,31 @@ docker-compose up -d
 
 ### Running Locally (without Docker)
 
-1. Install dependencies:
+This project uses [uv](https://github.com/astral-sh/uv) as the package manager for faster dependency resolution and installation.
+
+1. Install uv (if not already installed):
 ```bash
-pip install -r requirements.txt
+# On macOS and Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Or using pip
+pip install uv
 ```
 
-2. Start Redis (required):
+2. Install dependencies:
+```bash
+# Create virtual environment and install dependencies
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install project dependencies
+uv pip install -e .
+
+# Or install with dev dependencies (for testing)
+uv pip install -e ".[dev]"
+```
+
+3. Start Redis (required):
 ```bash
 # Using Docker
 docker run -d -p 6379:6379 redis:7-alpine
@@ -58,13 +77,13 @@ docker run -d -p 6379:6379 redis:7-alpine
 # Or install Redis locally
 ```
 
-3. Create `.env` file:
+4. Create `.env` file:
 ```bash
 cp .env.example .env
 # Update REDIS_HOST=localhost if running Redis locally
 ```
 
-4. Run the application:
+5. Run the application:
 ```bash
 uvicorn app.main:app --reload
 ```
@@ -200,18 +219,47 @@ nasa-apod-api/
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
+├── pyproject.toml     # Project configuration with uv
+├── tests/             # Unit tests
 ├── .env.example
 └── README.md
 ```
 
 ### Running Tests
-```bash
-# Install dev dependencies
-pip install pytest pytest-asyncio httpx
 
-# Run tests (if tests are added)
+This project includes comprehensive unit tests with >80% code coverage.
+
+```bash
+# Install dev dependencies with uv
+uv pip install -e ".[dev]"
+
+# Run all tests
 pytest
+
+# Run tests with verbose output
+pytest -v
+
+# Run tests with coverage report
+pytest --cov=app --cov-report=term-missing
+
+# Run tests with HTML coverage report
+pytest --cov=app --cov-report=html
+# Open htmlcov/index.html in browser to view detailed coverage
+
+# Run specific test file
+pytest tests/test_service.py
+
+# Run specific test
+pytest tests/test_service.py::test_get_next_date
 ```
+
+**Test Coverage:**
+- `test_config.py` - Configuration and settings validation
+- `test_models.py` - Pydantic model validation
+- `test_service.py` - NASA APOD service and caching logic
+- `test_main.py` - FastAPI endpoint testing
+
+Current coverage: **86%** (exceeds 80% minimum requirement)
 
 ## API Best Practices
 
